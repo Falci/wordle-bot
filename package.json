@@ -1,0 +1,15 @@
+{
+  "name": "wordle-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {},
+  "scripts": {
+    "start": "node ."
+  },
+  "dependencies": {
+    "puppeteer": "^13.7.0",
+    "puppeteer-screen-recorder": "^2.0.2"
+  }
+}

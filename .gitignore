@@ -1,0 +1,7 @@
+node_modules
+*.log
+cypress/videos
+*.mp4
+ffmpeg
+.DS_Store
+share.txt
