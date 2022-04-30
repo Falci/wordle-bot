@@ -17,9 +17,18 @@ export class Game {
   }
 
   static async fromConfig(config) {
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      defaultViewport: null,
+      defaultViewport: config.videoFrame,
+      args: [
+        `--window-size=${config.videoFrame.width},${config.videoFrame.height}`,
+      ],
+    });
     const page = await browser.newPage();
     page.setCookie(...cookies);
+    await page.emulateMediaFeatures([
+      { name: 'prefers-color-scheme', value: 'dark' },
+    ]);
 
     const recorder = new PuppeteerScreenRecorder(page, config);
     await page.goto('https://www.nytimes.com/games/wordle/index.html');
@@ -59,11 +68,11 @@ export class Game {
 
     for (let i = 0; i < word.length; i++) {
       await this.page.keyboard.press(word[i]);
-      await this.page.waitForTimeout(150);
+      await this.wait(150);
     }
     await this.page.keyboard.press('Enter');
     await this.syncState();
-    await this.wait(2000);
+    await this.wait(2500);
   }
 
   async syncState() {

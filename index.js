@@ -5,10 +5,10 @@ const config = {
   fps: 30,
   ffmpeg_Path: null,
   videoFrame: {
-    width: 1024,
-    height: 768,
+    width: 768,
+    height: 1024,
   },
-  aspectRatio: '4:3',
+  aspectRatio: '9:16',
 };
 
 (async () => {

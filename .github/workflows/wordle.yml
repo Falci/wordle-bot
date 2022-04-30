@@ -32,24 +32,48 @@ jobs:
         run: |
           echo "$TWURLRC" > ~/.twurlrc
 
-          SIZE=`ls -l video.mp4 | awk '{print $5}'`
+          REPO=https://github.com/Falci/wordle-bot
 
-          MEDIA_ID=`twurl -H "upload.twitter.com" -X POST "/1.1/media/upload.json" -d "command=INIT&total_bytes=$SIZE&additional_owners=$OWNER&media_category=TWEET_VIDEO&media_type=video/mp4" --file-field media | jq -r '.media_id_string'`
+          SHARE=`cat ./share.txt`
+          TITLE="$(echo $SHARE | head -n 1)"
+          DAY=`echo $TITLE | awk '{print $2}'`
+          SCORE=`echo $TITLE | awk '{print $3}'`
 
-          twurl -H "upload.twitter.com" -X POST "/1.1/media/upload.json" -d "command=APPEND&media_id=$MEDIA_ID&segment_index=0" --file ./video.mp4 --file-field media
+          DESC="$SHARE\n\n#shorts\n$REPO"
 
-          DELAY=`twurl -H "upload.twitter.com" -X POST "/1.1/media/upload.json" -d "command=FINALIZE&media_id=$MEDIA_ID" | jq -r 'if .processing_info.state == "succeeded" then 0 else .processing_info.check_after_secs end'`
+          TWEET_ID=`twurl -d "status=$SHARE" /1.1/statuses/update.json | jq -r '.id_str'`
+          echo "Tweeted: https://twitter.com/statuses/$TWEET_ID"
 
-          sleep $DELAY
-          sleep 5
+          YT_TOKEN=`curl https://www.googleapis.com/oauth2/v4/token \
+            -d client_id=$YT_CLIENT_ID \
+            -d client_secret=$YT_CLIENT_SECRET \
+            -d refresh_token=$YT_REFRESH_TOKEN \
+            -d grant_type=refresh_token -s | jq -r '.access_token'`
 
-          TEXT=`cat ./share.txt`
-          URL=https://github.com/Falci/wordle-bot
+          LOCATION=`curl "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status&key=$YT_CLIENT_ID" \
+            --header "Authorization: Bearer $YT_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data '{"snippet": {"title": "'$TITLE'","description": "'$DESC'","tags": ["wordle", "day'$DAY'", "shorts"],},"status": {"privacyStatus": "public"}}' \
+            --dump-header /dev/fd/1 \
+            --silent | grep location | awk '{print $2}'`
 
-          TWEET_ID=`twurl -d "status=$TEXT" /1.1/statuses/update.json | jq -r '.id_str'`
-          twurl -d "in_reply_to_status_id=$TWEET_ID&media_ids=${MEDIA_ID}&status=$URL" /1.1/statuses/update.json
+          if [ -z "$LOCATION" ]; then
+            echo "Error: Could not upload the video to YouTube."
+            exit 0;
+          fi
+
+          VIDEO_ID=`curl $LOCATION \
+            --header "Authorization: Bearer $YT_TOKEN" \
+            --header 'Content-Type: application/octet-stream' \
+            --data-binary @video.mp4 -s | jq -r '.id'`
+
+          TWEET_TEXT2="https://youtu.be/$VIDEO_ID"
+          twurl -d "in_reply_to_status_id=$TWEET_ID&status=$TWEET_TEXT2" /1.1/statuses/update.json
 
         shell: bash
         env:
           TWURLRC: ${{secrets.TWURLRC}}
           OWNER: ${{secrets.OWNER}}
+          YT_CLIENT_ID: ${{secrets.YT_CLIENT_ID}}
+          YT_CLIENT_SECRET: ${{secrets.YT_CLIENT_SECRET}}
+          YT_REFRESH_TOKEN: ${{secrets.YT_REFRESH_TOKEN}}
