@@ -1,7 +1,7 @@
 name: Wordle
 on:
   schedule:
-    - cron: '11 10 * * *'
+    - cron: '15 6 * * *'
   push:
     branches: [master]
 
@@ -16,60 +16,22 @@ jobs:
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1.1.0
 
-      - name: Yarn
+      - name: Install Ynar
         uses: c-hive/gha-yarn-cache@v2
-      - run: yarn && yarn start
 
       - name: Set up Ruby 2.6
         uses: actions/setup-ruby@v1
         with:
           ruby-version: 2.6
-      - name: Build and test with Rake
-        run: |
-          gem install twurl
 
-      - name: Setup twurl
-        run: |
-          echo "$TWURLRC" > ~/.twurlrc
+      - name: Install twurl
+        run: gem install twurl
 
-          REPO=https://github.com/Falci/wordle-bot
+      - name: Game it out!
+        run: yarn && yarn start
 
-          SHARE=`cat ./share.txt`
-          TITLE="$(echo $SHARE | head -n 1)"
-          DAY=`echo $TITLE | awk '{print $2}'`
-          SCORE=`echo $TITLE | awk '{print $3}'`
-
-          DESC="$SHARE\n\n#shorts\n$REPO"
-
-          TWEET_ID=`twurl -d "status=$SHARE" /1.1/statuses/update.json | jq -r '.id_str'`
-          echo "Tweeted: https://twitter.com/statuses/$TWEET_ID"
-
-          YT_TOKEN=`curl https://www.googleapis.com/oauth2/v4/token \
-            -d client_id=$YT_CLIENT_ID \
-            -d client_secret=$YT_CLIENT_SECRET \
-            -d refresh_token=$YT_REFRESH_TOKEN \
-            -d grant_type=refresh_token -s | jq -r '.access_token'`
-
-          LOCATION=`curl "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status&key=$YT_CLIENT_ID" \
-            --header "Authorization: Bearer $YT_TOKEN" \
-            --header 'Content-Type: application/json' \
-            --data '{"snippet": {"title": "'$TITLE'","description": "'$DESC'","tags": ["wordle", "day'$DAY'", "shorts"],},"status": {"privacyStatus": "public"}}' \
-            --dump-header /dev/fd/1 \
-            --silent | grep location | awk '{print $2}'`
-
-          if [ -z "$LOCATION" ]; then
-            echo "Error: Could not upload the video to YouTube."
-            exit 0;
-          fi
-
-          VIDEO_ID=`curl $LOCATION \
-            --header "Authorization: Bearer $YT_TOKEN" \
-            --header 'Content-Type: application/octet-stream' \
-            --data-binary @video.mp4 -s | jq -r '.id'`
-
-          TWEET_TEXT2="https://youtu.be/$VIDEO_ID"
-          twurl -d "in_reply_to_status_id=$TWEET_ID&status=$TWEET_TEXT2" /1.1/statuses/update.json
-
+      - name: Publish
+        run: bash ./script.sh
         shell: bash
         env:
           TWURLRC: ${{secrets.TWURLRC}}
