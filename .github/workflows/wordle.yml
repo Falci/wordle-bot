@@ -16,16 +16,8 @@ jobs:
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1.1.0
 
-      - name: Install Ynar
+      - name: Install Yarn
         uses: c-hive/gha-yarn-cache@v2
-
-      - name: Set up Ruby 2.6
-        uses: actions/setup-ruby@v1
-        with:
-          ruby-version: 2.6
-
-      - name: Install twurl
-        run: gem install twurl
 
       - name: Game it out!
         run: yarn && yarn start
@@ -34,8 +26,5 @@ jobs:
         run: bash ./script.sh
         shell: bash
         env:
-          TWURLRC: ${{secrets.TWURLRC}}
-          OWNER: ${{secrets.OWNER}}
-          YT_CLIENT_ID: ${{secrets.YT_CLIENT_ID}}
-          YT_CLIENT_SECRET: ${{secrets.YT_CLIENT_SECRET}}
-          YT_REFRESH_TOKEN: ${{secrets.YT_REFRESH_TOKEN}}
+          PEM: ${{secrets.YT_PRIVATE_KEY}}
+          ISS: ${{secrets.YT_CLIENT_EMAIL}}

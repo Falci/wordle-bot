@@ -1,23 +1,37 @@
 #!/bin/bash
 
 # Authenticate
-## Twitter
-echo "$TWURLRC" > ~/.twurlrc
+NOW=$( date +%s )
+IAT="${NOW}"
+EXP=$((${NOW} + 600))
+
+HEADER_RAW='{"alg": "RS256","typ": "JWT"}'
+HEADER=$( echo -n "${HEADER_RAW}" | openssl base64 | tr -d '\n' | tr -d '=' | tr '/+' '_-' )
+
+CLAIM_RAW='{
+    "iat": '"${IAT}"',
+    "exp": '"${EXP}"',
+    "iss": "'"${ISS}"'",
+    "scope": "https://www.googleapis.com/auth/youtube.upload",
+    "aud": "https://oauth2.googleapis.com/token"
+}'
+CLAIM=$( echo -n "${CLAIM_RAW}" | openssl base64 | tr -d '\n' | tr -d '=' | tr '/+' '_-' )
+
+HEADER_CLAIM="${HEADER}"."${CLAIM}"
+
+SIGNATURE=$( openssl dgst -sha256 -sign <(echo -n "${PEM}") <(echo -n "${HEADER_CLAIM}") | openssl base64 | tr -d '=' | tr '/+' '_-' | tr -d '\n' )
+JWT="${HEADER_CLAIM}"."${SIGNATURE}"
 
 ## Youtube
-YT_TOKEN=`curl https://www.googleapis.com/oauth2/v4/token \
-    -d client_id=$YT_CLIENT_ID \
-    -d client_secret=$YT_CLIENT_SECRET \
-    -d refresh_token=$YT_REFRESH_TOKEN \
-    -d grant_type=refresh_token -s | jq -r '.access_token'`
+YT_TOKEN=`curl \
+    -d "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
+    -d "assertion=$JWT" \
+    https://oauth2.googleapis.com/token -s | jq -r '.access_token'`
+
 
 # Load content
 DESC=`cat ./description.txt`
 SHARE=`cat ./share.txt`
-
-# Tweet
-TWEET_ID=`twurl -d "status=$SHARE" /1.1/statuses/update.json | jq -r '.id_str'`
-echo "Tweeted: https://twitter.com/FernandoFalci/status/$TWEET_ID"
 
 TITLE=$(echo "$SHARE" | head -n 1)
 DAY=$(echo $TITLE | awk '{print $2}')
@@ -52,13 +66,7 @@ AUDIO=${AUDIOS[$AUDIO_INDEX]}
 ffmpeg -loglevel error -i video.mp4 -i "$AUDIO" -map 0:v -map 1:a -c:v copy -shortest output.mp4 
 
 ## 4. Upload the video
-VIDEO_ID=$(curl $LOCATION \
+curl "$LOCATION" \
     --header "Authorization: Bearer $YT_TOKEN" \
     --header 'Content-Type: application/octet-stream' \
-    --data-binary @output.mp4 -s | jq -r '.id')
-
-echo "Uploaded video: https://youtu.be/$VIDEO_ID"
-
-## 5. Tweet a reply to the first tweet.
-TWEET_TEXT2="https://youtu.be/$VIDEO_ID"
-twurl -d "in_reply_to_status_id=$TWEET_ID&status=$TWEET_TEXT2" /1.1/statuses/update.json
+    --data-binary @output.mp4
