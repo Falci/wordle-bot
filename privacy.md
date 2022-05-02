@@ -1,4 +1,6 @@
-# Privacy
+layout: page
+title: "Privacy"
+permalink: /privacy/
 
 This app is not intended to be public, but this is the only way to use Youtube API to upload videos to my personal account.
 
