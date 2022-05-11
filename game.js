@@ -8,18 +8,22 @@ const cookies = [
 ];
 
 export class Game {
-  constructor({ page, recorder, browser }) {
+  constructor({ page, recorder, browser, config: { useSortedList } }) {
     this.browser = browser;
     this.page = page;
     this.recorder = recorder;
-    this.words = JSON.parse(fs.readFileSync('words.json', 'utf8'));
+    const list = useSortedList ? 'words.sorted.json' : 'words.json';
+    this.words = JSON.parse(fs.readFileSync(list, 'utf8'));
     this.has = [];
+
+    this.useSortedList = useSortedList;
   }
 
   static async fromConfig(config) {
     const browser = await puppeteer.launch({
       defaultViewport: null,
       defaultViewport: config.videoFrame,
+      // headless: false,
       args: [
         `--window-size=${config.videoFrame.width},${config.videoFrame.height}`,
       ],
@@ -33,7 +37,7 @@ export class Game {
     const recorder = new PuppeteerScreenRecorder(page, config);
     await page.goto('https://www.nytimes.com/games/wordle/index.html');
 
-    const game = new Game({ page, recorder, browser });
+    const game = new Game({ page, recorder, browser, config });
     await game.syncState();
 
     return game;
@@ -72,7 +76,7 @@ export class Game {
     }
     await this.page.keyboard.press('Enter');
     await this.syncState();
-    await this.wait(2500);
+    await this.wait(2750);
   }
 
   async syncState() {
@@ -84,7 +88,9 @@ export class Game {
 
   async autoPlay() {
     console.log(`Words: ${this.words.length}`);
-    await this.guess();
+    const word =
+      this.useSortedList && this.state.rowIndex ? this.words[0] : undefined;
+    await this.guess(word);
 
     const { state } = this;
     const guess = state.boardState[state.rowIndex - 1];

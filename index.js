@@ -9,6 +9,7 @@ const config = {
     height: 1024,
   },
   aspectRatio: '9:16',
+  useSortedList: true,
 };
 
 (async () => {
