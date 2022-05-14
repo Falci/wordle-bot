@@ -1,32 +1,12 @@
 #!/bin/bash
 
 # Authenticate
-NOW=$( date +%s )
-IAT="${NOW}"
-EXP=$((${NOW} + 600))
-
-HEADER_RAW='{"alg": "RS256","typ": "JWT"}'
-HEADER=$( echo -n "${HEADER_RAW}" | openssl base64 | tr -d '\n' | tr -d '=' | tr '/+' '_-' )
-
-CLAIM_RAW='{
-    "iat": '"${IAT}"',
-    "exp": '"${EXP}"',
-    "iss": "'"${ISS}"'",
-    "scope": "https://www.googleapis.com/auth/youtube.upload",
-    "aud": "https://oauth2.googleapis.com/token"
-}'
-CLAIM=$( echo -n "${CLAIM_RAW}" | openssl base64 | tr -d '\n' | tr -d '=' | tr '/+' '_-' )
-
-HEADER_CLAIM="${HEADER}"."${CLAIM}"
-
-SIGNATURE=$( openssl dgst -sha256 -sign <(echo -n "${PEM}") <(echo -n "${HEADER_CLAIM}") | openssl base64 | tr -d '=' | tr '/+' '_-' | tr -d '\n' )
-JWT="${HEADER_CLAIM}"."${SIGNATURE}"
-
 ## Youtube
-YT_TOKEN=`curl \
-    -d "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
-    -d "assertion=$JWT" \
-    https://oauth2.googleapis.com/token -s | jq -r '.access_token'`
+YT_TOKEN=`curl https://www.googleapis.com/oauth2/v4/token \
+    -d client_id=$YT_CLIENT_ID \
+    -d client_secret=$YT_CLIENT_SECRET \
+    -d refresh_token=$YT_REFRESH_TOKEN \
+    -d grant_type=refresh_token -s | jq -r '.access_token'`
 
 
 # Load content

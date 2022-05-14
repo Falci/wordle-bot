@@ -26,5 +26,6 @@ jobs:
         run: bash ./script.sh
         shell: bash
         env:
-          PEM: ${{secrets.YT_PRIVATE_KEY}}
-          ISS: ${{secrets.YT_CLIENT_EMAIL}}
+          YT_CLIENT_ID: ${{secrets.YT_CLIENT_ID}}
+          YT_CLIENT_SECRET: ${{secrets.YT_CLIENT_SECRET}}
+          YT_REFRESH_TOKEN: ${{secrets.YT_REFRESH_TOKEN}}
